@@ -1,15 +1,29 @@
-FROM node:14-alpine
+# pull official base image
+FROM node:13.12.0-alpine as builder
 
+# set working directory
 WORKDIR /app
 
+# add `/app/node_modules/.bin` to $PATH
+ENV PATH /app/node_modules/.bin:$PATH
+
+# install app dependencies
 COPY package.json ./
+COPY package-lock.json ./
+RUN npm install --silent
+RUN npm install react-scripts@3.4.1 -g --silent
 
-COPY yarn.lock ./
+# add app
+COPY . ./
 
-RUN yarn install --frozen-lockfile
+# start app
+CMD ["npm", "run" ,"build"]
 
-COPY . .
+# Fetching the latest nginx image
+FROM nginx
 
-EXPOSE 3000
+# Copying built assets from builder
+COPY --from=builder /app/build /usr/share/nginx/html
 
-CMD ["npm", "start"]
+# Copying our nginx.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
